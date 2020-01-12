@@ -38,6 +38,7 @@ static void change_directory(struct command *cmd) {
 					last_retval = 1;
 					return;
 				}
+				printf("%s\n", target);
 			} else target = cmd->args->arr[1];
 			break;
 		default:

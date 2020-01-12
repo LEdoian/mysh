@@ -3,8 +3,6 @@
 
 #include "grow.h"
 
-#include <stdlib.h>
-
 #include <err.h>
 
 #include "utils.h"

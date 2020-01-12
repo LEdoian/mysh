@@ -1,4 +1,7 @@
 .*
 !.gitignore
 *.o
+*.tab.c
+*.tab.h
+lex.yy.c
 /mysh

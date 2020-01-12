@@ -23,6 +23,6 @@ void destroy_pipeline (struct command *pl) {
 void destroy_command (struct command *cmd) {
 	// As of now, the .in and .out fields are not ever assigned
 	// We only need to deallocate the array
-	grow_drop(cmd->arr);
+	grow_drop(cmd->args);
 	free(cmd);
 }

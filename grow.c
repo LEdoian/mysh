@@ -37,6 +37,9 @@ void grow_push (void *val, struct grow *g) {
 
 // Pops the last element of the array
 void *grow_pop (struct grow *g) {
+	if (g == NULL) {
+			errx(3, "grow: bad array");
+	}
 	if (g->elems == 0) {
 		return NULL;
 	} else {
@@ -47,12 +50,16 @@ void *grow_pop (struct grow *g) {
 
 // Deallocates the array, optionally also deallocating all its elements
 void grow_drop (struct grow *g) {
+	if (g == NULL) {
+			errx(3, "grow: bad array");
+	}
 	if (g->dealloc) {
 		for(uint64_t i = 0; i < g->elems; i++) {
 			free(g->arr[i]);
 		}
 	}
 	free(g->arr);
+	g.arr = NULL;	// Let it fail and not use free'd memory
 	free(g);
 	return;
 }

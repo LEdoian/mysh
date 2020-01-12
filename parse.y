@@ -1,20 +1,25 @@
 %{
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <err.h>
 
+#include "constants.h"
 #include "parse.h"
+#include "run.h"
 #include "utils.h"
 
-static struct grow *push_pipeline(struct command *cmd, struct grow *pl);
+//static struct grow *push_pipeline(struct command *cmd, struct grow *pl);
 static struct command *push_arg(char *word, struct command *cmd);
 
+bool end_reached = false;
+int last_retval = 0;
 %}
 
 %union {
 	struct command *cmd;
-	struct grow *list;
 	char *word;
 }
 
@@ -24,28 +29,35 @@ static struct command *push_arg(char *word, struct command *cmd);
 
 /* TODO: As of now, pipeline is the same as command */
 %type <cmd> command pipeline
-%type <list> pipeline_list
+
+%destructor { destroy_command($$); } <cmd>
 
 %%
-
-pipeline_list: END /* Probably can be nothing here */	{ $$ = NULL; }
-	| pipeline_list pipeline END	{ $$ = push_pipeline($2, $1); }
-	;
+chunk: pipeline END	{
+		run_pipeline($1);
+		destroy_pipeline($1);
+		}
 
 pipeline: command	{ $$ = $1; }
 	| pipeline PIPE command	{ 
 		yyerror("Pipelines are not yet implemented");
+		destroy_pipeline($1);
+		// We don't need to care for the command, since we have only one token lokahead.
+		YYABORT;
+		$$ = NULL;
+		(void) $3;
 		}
 	;
 
 command: WORD { $$ = push_arg($1, NULL); }
 	| command WORD { $$ = push_arg($2, $1); }
-	| REDIRECT { yyerror("Redirects are not yet implemented"); }
-	| command REDIRECT { yyerror("Redirects are not yet implemented"); }
+	| REDIRECT { yyerror("Redirects are not yet implemented"); YYABORT; $$ = NULL; (void) $1; }
+	| command REDIRECT { yyerror("Redirects are not yet implemented"); destroy_command($1); YYABORT; $$ = NULL; (void) $2; }
 	;
 
 %%
 
+/* To be uncommented
 static struct grow *push_pipeline(struct command *cmd, struct grow *pl) {
 	struct grow *result;
 	if (pl == NULL) {
@@ -55,7 +67,7 @@ static struct grow *push_pipeline(struct command *cmd, struct grow *pl) {
 	}
 	grow_push(cmd, result);
 	return result;
-}
+}*/
 
 static struct command *push_arg(char *word, struct command *cmd) {
 	struct command *result;
@@ -65,6 +77,9 @@ static struct command *push_arg(char *word, struct command *cmd) {
 	} else {
 		result = cmd;
 	}
-	grow_push(word, cmd->args);
+	// yytext is recycled, so we need to save the value.
+	char *new_word = safe_alloc(strlen(word)+1);
+	strcpy(new_word, word);
+	grow_push(new_word, result->args);
 	return result;
 }

@@ -14,3 +14,12 @@ void *safe_alloc(size_t nbytes) {
 	}
 	return result;
 }
+
+// To-be-implemented
+void destroy_pipeline (struct command *pl) {
+	destroy_command(pl);
+}
+
+void destroy_command (struct command *cmd) {
+
+}

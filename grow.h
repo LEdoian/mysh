@@ -1,7 +1,8 @@
 /* Header file for the generic growing array
  */
 
-#pragma once
+#ifndef GROW_H
+#define GROW_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,3 +19,5 @@ struct grow *grow_init(bool dealloc);
 void grow_push (void *val, struct grow *g);
 void *grow_pop (struct grow *g);
 void grow_drop (struct grow *g);
+
+#endif

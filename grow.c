@@ -57,7 +57,7 @@ void grow_drop (struct grow *g) {
 		}
 	}
 	free(g->arr);
-	g.arr = NULL;	// Let it fail and not use free'd memory
+	g->arr = NULL;	// Let it fail and not use free'd memory
 	free(g);
 	return;
 }

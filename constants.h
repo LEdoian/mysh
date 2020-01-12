@@ -1,9 +1,13 @@
-#pragma once
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 #include <stddef.h>
 
-const int BAD_USAGE_RETURN_VALUE = 2;
-const size_t MAX_LINE_LENGTH = 4096;
-const size_t MAX_HISTORY_LENGTH = 10*MAX_LINE_LENGTH;	// Remember at least 10 commands
+extern const int BAD_USAGE_RETURN_VALUE;
+extern const size_t MAX_LINE_LENGTH;
+extern const size_t MAX_HISTORY_LENGTH;
 
+extern const int RETVAL_BAD_SYNTAX;
+extern const int RETVAL_ERROR;
 
+#endif

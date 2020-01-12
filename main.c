@@ -28,12 +28,13 @@ static char *gen_prompt(void) {
 	return prompt;
 }
 
-// Actually, it's more read-execute loop, but we're calling it repl anyway
 static int repl(void) {
-	int retval = 0;	// The value to be returned in the end
-	bool exit = false;	// Shall we exit yet?
 	GetLine *gl = new_GetLine(MAX_LINE_LENGTH, MAX_HISTORY_LENGTH);
-	while (!exit) {
+	last_retval = 0;
+
+	// This loop is terminated by EOF
+	// The "exit" command calls exit() on its own
+	while (true) {
 		// Read
 		char *prompt = gen_prompt();
 		
@@ -63,10 +64,10 @@ static int repl(void) {
 		free(prompt);
 
 		// Execute
-		retval = parse_and_run_str(line, &exit);
+		parse_and_run_str(line);
 	}
 	del_GetLine(gl);
-	return retval;
+	exit(last_retval);
 }
 
 int main (int argc, char **argv) {
@@ -74,7 +75,7 @@ int main (int argc, char **argv) {
 	// Just switch between possible methods of running mysh
 	// It would be possible to use getopt, but it's too heavyweight for mysh
 	if (argc <= 1) return repl();
-	if (argc == 3 && strcmp(argv[1], "-c") == 0) return parse_and_run_str(argv[2], NULL);
+	if (argc == 3 && strcmp(argv[1], "-c") == 0) return parse_and_run_str(argv[2]);
 	if (argc == 2 && strcmp(argv[1], "") > 0) return parse_and_run_script(argv[1]);
 	
 	// If nothing holds, mysh was run in a strange way

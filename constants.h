@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/types.h>
+#include <stddef.h>
 
 const int BAD_USAGE_RETURN_VALUE = 2;
 const size_t MAX_LINE_LENGTH = 4096;

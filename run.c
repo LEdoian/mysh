@@ -81,9 +81,13 @@ void run_command(struct command *cmd) {
 	if (pid == 0) {
 		// Child
 		// Reset signals
-		sigset_t set;
-		sigfillset(&set);
-		if (sigprocmask(SIG_UNBLOCK, &set, NULL) == -1) err(RETVAL_ERROR, "sigprocmask");
+		struct sigaction sa;
+		sa.sa_handler = SIG_DFL;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART;
+		if (sigaction(SIGINT, &sa, NULL) == -1) {
+			err(RETVAL_ERROR, "sigaction");
+		}
 		
 		execvp((char *) cmd->args->arr[0], (char **) cmd->args->arr);
 		fprintf(stderr, "mysh: %s: %s\n", (char *) cmd->args->arr[0], strerror(errno));

@@ -10,7 +10,7 @@ mysh: $(OBJS) Makefile
 	gcc -g $(LINKFLAGS) -o mysh $(OBJS)
 
 %.o: %.c $(HEADERS) Makefile libtecla
-	gcc -g -Wall -Wextra -c $<
+	gcc -g -Wall -Wextra $(CCFLAGS) -c $<
 
 %.tab.h: %.y Makefile
 	bison -d $<

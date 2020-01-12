@@ -31,7 +31,7 @@ static void change_directory(struct command *cmd) {
 			}
 			break;
 		case 2:
-			if (strcmp(cmd->args->arr[1], "-")) {
+			if (strcmp(cmd->args->arr[1], "-") == 0) {
 				target = getenv("OLDPWD");
 				if (target == NULL) {
 					warnx("OLDPWD not set");
@@ -54,7 +54,7 @@ static void change_directory(struct command *cmd) {
 	// The directory is changed, so we report success (even though environment may be a bit broken)
 	last_retval = 0;
 	if (setenv("OLDPWD", wd, 1) == -1) warn("set OLDPWD");
-	if (setenv("PWD", wd, 1) == -1) warn("set PWD");
+	if (setenv("PWD", target, 1) == -1) warn("set PWD");
 }
 
 void run_pipeline(struct command *pl) {

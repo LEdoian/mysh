@@ -86,14 +86,18 @@ void run_command(struct command *cmd) {
 		if (sigprocmask(SIG_UNBLOCK, &set, NULL) == -1) err(RETVAL_ERROR, "sigprocmask");
 		
 		execvp((char *) cmd->args->arr[0], (char **) cmd->args->arr);
-		if (errno == ENOENT) {
-			fprintf(stderr, "mysh: %s: %s\n", (char *) cmd->args->arr[0], strerror(errno));
-			exit(127);
+		fprintf(stderr, "mysh: %s: %s\n", (char *) cmd->args->arr[0], strerror(errno));
+		switch (errno) {
+			case ENOENT:
+				exit(127);
+			case EACCES:
+				exit(126);
+			default:
+				exit(RETVAL_ERROR);
+			break;
 		}
-		if (errno == ENOEXEC) {
-			fprintf(stderr, "mysh: %s: %s\n", (char *) cmd->args->arr[0], strerror(errno));
-			exit(126);
-		}
+
+
 	}
 	// Parent
 	pid_t result;

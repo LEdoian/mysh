@@ -4,6 +4,7 @@
 HEADERS:=grow.h utils.h parse.h parse.tab.h constants.h run.h
 OBJS:=grow.o main.o parse.tab.o lex.yy.o utils.o run.o constants.o
 LINKFLAGS:= -ltecla -L./libtecla
+CCFLAGS:= -I./libtecla
 
 mysh: $(OBJS) Makefile
 	gcc -g $(LINKFLAGS) -o mysh $(OBJS)
@@ -23,9 +24,8 @@ lex.yy.c: parse.l parse.tab.h Makefile
 
 libtecla:
 	# On my machines tecla already is.
-	man libtecla | cat || { \
-		curl 'http://www.astro.caltech.edu/~mcs/tecla/libtecla.tar.gz' > libtecla.tar.gz \
-		tar xavf libtecla.tar.gz \
-		cd libtecla \
-		./configure && make \
-		; }
+	man libtecla || { \
+		curl 'http://www.astro.caltech.edu/~mcs/tecla/libtecla.tar.gz' > libtecla.tar.gz ;\
+		tar xavf libtecla.tar.gz ;\
+		cd libtecla ;\
+		./configure && make ;}

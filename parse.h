@@ -8,7 +8,7 @@
 // Interface to the lexer
 extern int yylineno;
 void yyerror(char *str);
-extern int yylex (void); //?
+extern int yylex(void);		//?
 
 // Since the lexer and parser rely on global variables, we use them to extract their status
 // (It is also hinted in the book that it often works like this)

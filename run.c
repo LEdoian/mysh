@@ -15,36 +15,38 @@
 #include "run.h"
 #include "utils.h"
 
-static void change_directory(struct command *cmd) {
-	char wd[2048];	// Fix hard-coded constant
+static void change_directory(struct command *cmd)
+{
+	char wd[2048];		// Fix hard-coded constant
 	if (getcwd(wd, 2048) == NULL) {
 		err(RETVAL_ERROR, "getcwd");
 	}
 	char *target;
 	switch (cmd->args->elems) {
-		case 1:
-			target = getenv("HOME");
+	case 1:
+		target = getenv("HOME");
+		if (target == NULL) {
+			warnx("HOME not set");
+			last_retval = 1;
+			return;
+		}
+		break;
+	case 2:
+		if (strcmp(cmd->args->arr[1], "-") == 0) {
+			target = getenv("OLDPWD");
 			if (target == NULL) {
-				warnx("HOME not set");
+				warnx("OLDPWD not set");
 				last_retval = 1;
 				return;
 			}
-			break;
-		case 2:
-			if (strcmp(cmd->args->arr[1], "-") == 0) {
-				target = getenv("OLDPWD");
-				if (target == NULL) {
-					warnx("OLDPWD not set");
-					last_retval = 1;
-					return;
-				}
-				printf("%s\n", target);
-			} else target = cmd->args->arr[1];
-			break;
-		default:
-			warnx("Bad usage of cd (too many)");
-			last_retval = 2;
-			return;
+			printf("%s\n", target);
+		} else
+			target = cmd->args->arr[1];
+		break;
+	default:
+		warnx("Bad usage of cd (too many)");
+		last_retval = 2;
+		return;
 	}
 
 	if (chdir(target) == -1) {
@@ -54,23 +56,28 @@ static void change_directory(struct command *cmd) {
 	}
 	// The directory is changed, so we report success (even though environment may be a bit broken)
 	last_retval = 0;
-	if (setenv("OLDPWD", wd, 1) == -1) warn("set OLDPWD");
-	if (setenv("PWD", target, 1) == -1) warn("set PWD");
+	if (setenv("OLDPWD", wd, 1) == -1)
+		warn("set OLDPWD");
+	if (setenv("PWD", target, 1) == -1)
+		warn("set PWD");
 }
 
-void run_pipeline(struct command *pl) {
+void run_pipeline(struct command *pl)
+{
 	//TODO: implement pipelines
 	run_command(pl);
 }
 
-void run_command(struct command *cmd) {
-	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1) errx(RETVAL_ERROR, "bad cmd");
-	if (strcmp(cmd->args->arr[0], "exit") == 0) exit(last_retval);
+void run_command(struct command *cmd)
+{
+	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1)
+		errx(RETVAL_ERROR, "bad cmd");
+	if (strcmp(cmd->args->arr[0], "exit") == 0)
+		exit(last_retval);
 	if (strcmp(cmd->args->arr[0], "cd") == 0) {
 		change_directory(cmd);
 		return;
 	}
-
 	// We want to use cmd->args as argument to execvp
 	grow_push(NULL, cmd->args);
 	pid_t pid = fork();
@@ -89,19 +96,19 @@ void run_command(struct command *cmd) {
 		if (sigaction(SIGINT, &sa, NULL) == -1) {
 			err(RETVAL_ERROR, "sigaction");
 		}
-		
-		execvp((char *) cmd->args->arr[0], (char **) cmd->args->arr);
-		fprintf(stderr, "mysh: %s: %s\n", (char *) cmd->args->arr[0], strerror(errno));
+
+		execvp((char *)cmd->args->arr[0], (char **)cmd->args->arr);
+		fprintf(stderr, "mysh: %s: %s\n", (char *)cmd->args->arr[0],
+			strerror(errno));
 		switch (errno) {
-			case ENOENT:
-				exit(127);
-			case EACCES:
-				exit(126);
-			default:
-				exit(RETVAL_ERROR);
+		case ENOENT:
+			exit(127);
+		case EACCES:
+			exit(126);
+		default:
+			exit(RETVAL_ERROR);
 			break;
 		}
-
 
 	}
 	// Parent
@@ -109,12 +116,10 @@ void run_command(struct command *cmd) {
 	int status;
 	do {
 		result = waitpid(pid, &status, 0);
-	} while (
-		(result == -1 && errno == EINTR) ||
-		(result != -1 &&
-			( WIFSTOPPED(status) || WIFCONTINUED(status))
-		)
-	);
+	} while ((result == -1 && errno == EINTR) ||
+		 (result != -1 && (WIFSTOPPED(status) || WIFCONTINUED(status))
+		 )
+	    );
 
 	if (result == -1) {
 		warn("wait");

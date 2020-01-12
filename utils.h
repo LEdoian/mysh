@@ -6,7 +6,7 @@
 #include "parse.h"
 
 void *safe_alloc(size_t nbytes);
-void destroy_pipeline (struct command *pl);
-void destroy_command (struct command *cmd);
+void destroy_pipeline(struct command *pl);
+void destroy_command(struct command *cmd);
 
 #endif

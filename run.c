@@ -41,7 +41,7 @@ static void change_directory(struct command *cmd) {
 			} else target = cmd->args->arr[1];
 			break;
 		default:
-			warnx("Bad usage of cd");
+			warnx("Bad usage of cd (too many)");
 			last_retval = 2;
 			return;
 	}

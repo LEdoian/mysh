@@ -24,7 +24,8 @@ int last_retval = 0;
 }
 
 %token <word> WORD REDIRECT
-%token END
+%token SEMICOLON NEWLINE
+%token EOI 0
 %token PIPE
 
 /* TODO: As of now, pipeline is the same as command */
@@ -33,10 +34,18 @@ int last_retval = 0;
 %destructor { destroy_command($$); } <cmd>
 
 %%
-chunk: pipeline END	{
-		run_pipeline($1);
-		destroy_pipeline($1);
+chunk: chunk pipeline end	{
+		run_pipeline($2);
+		destroy_pipeline($2);
 		}
+	| /**/
+	;
+
+end: NEWLINE
+	| SEMICOLON
+	| SEMICOLON NEWLINE
+	| EOI
+	;
 
 pipeline: command	{ $$ = $1; }
 	| pipeline PIPE command	{ 

@@ -16,7 +16,7 @@
 %option noyywrap nodefault yylineno
 
 /* Letters that are not special in any way*/
-LETTER	([^;| \t\n<>])
+LETTER	([^#;| \t\n<>])
 WHITESPACE	([ \t])
 
 COMMENT	(#[^\n]*)
@@ -24,19 +24,20 @@ COMMENT	(#[^\n]*)
 %%
 
 {WHITESPACE}*	{ /* Ignore whitespace */  }
+{COMMENT}	{ /* Ignore comments */ }
 ^{WHITESPACE}*{COMMENT}?\n	{ /* Ignore empty line */  }
 
 	/* End of commands */
 	/* Note that every comment ends a command */
-;	|
-;?{WHITESPACE}*{COMMENT}?\n	{ return END; }
+;	{ return SEMICOLON; }
+\n	{ return NEWLINE; }
 
 {LETTER}+	{ yylval.word = yytext; return WORD; }
 
 (<|>|>>){WHITESPACE}*{LETTER}+	{ yylval.word = yytext; return REDIRECT;}
 "|"	{  return PIPE; }
 
-<<EOF>>	{ end_reached = true; yyterminate(); }
+<<EOF>>	{ end_reached = true; return EOI; }
 . { yyerror("Bad character"); }
 
 %%

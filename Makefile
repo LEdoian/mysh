@@ -9,14 +9,14 @@ CCFLAGS:= -I./libtecla
 mysh: $(OBJS) Makefile
 	gcc -g -o mysh $(OBJS) $(LINKFLAGS)
 
-%.o: %.c $(HEADERS) Makefile libtecla
+%.o: %.c $(HEADERS) Makefile
 	gcc -g -Wall -Wextra $(CCFLAGS) -c $<
 
 %.tab.h: %.y Makefile
 	bison -d $<
 
 # Probably redundant, but does not break anything
-%.tab.c: %y Makefile
+%.tab.c: %.y Makefile
 	bison -d $<
 
 lex.yy.c: parse.l parse.tab.h Makefile

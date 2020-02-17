@@ -14,6 +14,7 @@
 static struct grow *push_pipeline(struct command *cmd, struct grow *pl);
 static struct command *push_arg(char *word, struct command *cmd);
 static struct redirect *newredirect(enum redirtype type, char *filename);
+static struct command *apply_redirect(struct command *cmd, struct redirect *redir);
 
 bool end_reached = false;
 int last_retval = 0;
@@ -65,8 +66,8 @@ redirect: REDIRAPPEND WORD	{$$ = newredirect(APPEND, $2);}
 
 command: WORD { $$ = push_arg($1, NULL); }
 	| command WORD { $$ = push_arg($2, $1); }
-	| redirect { yyerror("Redirects are not yet implemented"); YYABORT; $$ = NULL; (void) $1; }
-	| command redirect { yyerror("Redirects are not yet implemented"); destroy_command($1); YYABORT; $$ = NULL; (void) $2; }
+	| redirect { $$ = apply_redirect(NULL, $1); }
+	| command redirect { $$ = apply_redirect($1, $2); }
 	;
 
 %%
@@ -101,5 +102,35 @@ static struct redirect *newredirect(enum redirtype type, char *filename) {
 	struct redirect *result = safe_alloc(sizeof(struct redirect));
 	result->redirtype = type;
 	result->file = filename;
+	return result;
+}
+
+// Deallocate old redirect and put the new one in its place
+static void redirect_clean_assign(struct redirect **old, struct redirect *new) {
+	if (old == NULL) {
+		warnx("redirect_clean_assign: Bad usage, target is NULL!");
+		return;
+	}
+	destroy_redirect(*old);
+	*old = new;
+}
+
+static struct command *apply_redirect(struct command *cmd, struct redirect *redir) {
+	if (redir == NULL) return cmd;
+	struct command *result;
+	if (cmd == NULL) {
+		result = (struct command *) safe_alloc(sizeof(struct command));
+		// We have to perform basic initialization of the command
+		result->args = grow_init(true);
+	} else {
+		result = cmd;
+	}
+	
+	if (redir->redirtype == IN) {
+		redirect_clean_assign(&(result->in), redir);
+	} else /* We are changing output */ {
+		redirect_clean_assign(&(result->out), redir);
+	}
+
 	return result;
 }

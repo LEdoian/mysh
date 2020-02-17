@@ -34,7 +34,9 @@ COMMENT	(#[^\n]*)
 
 {LETTER}+	{ yylval.word = yytext; return WORD; }
 
-(<|>|>>){WHITESPACE}*{LETTER}+	{ yylval.word = yytext; return REDIRECT;}
+">>"	{ yylval.word = yytext; return REDIRAPPEND;}
+">"	{ yylval.word = yytext; return REDIROUT;}
+"<"	{ yylval.word = yytext; return REDIRIN;}
 "|"	{  return PIPE; }
 
 <<EOF>>	{ end_reached = true; return EOI; }

@@ -29,3 +29,10 @@ void destroy_command(struct command *cmd)
 	grow_drop(cmd->args);
 	free(cmd);
 }
+
+void destroy_redirect(struct redirect *redir)
+{
+	if (redir == NULL) return;
+	free(redir->file);
+	free(redir);
+}

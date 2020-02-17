@@ -15,15 +15,22 @@ extern int yylex(void);		//?
 extern bool end_reached;
 extern int last_retval;
 
+// Possible types of redirect
+enum redirtype {IN, OUT, APPEND};
+
+// A struct to describe a redirect
+struct redirect {
+	enum redirtype redirtype;
+	char *file;
+};
+
 // A structure that describes a command to run
 struct command {
 	struct grow *args;
-	char *in;
-	char *out;
+	struct redirect *in;
+	struct redirect *out;
 	bool out_append;
 };
-
-// TODO: Structure to describe a pipeline
 
 int parse_and_run_str(char *str);
 int parse_and_run_script(char *filename);

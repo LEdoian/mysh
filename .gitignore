@@ -5,3 +5,4 @@
 *.tab.h
 lex.yy.c
 /mysh
+/tags

@@ -16,14 +16,18 @@ void *safe_alloc(size_t nbytes)
 	return result;
 }
 
-// To-be-implemented
-void destroy_pipeline(struct command *pl)
+void destroy_pipeline(struct grow *pl)
 {
-	destroy_command(pl);
+	if (pl == NULL) return;
+	for(int i = 0; i < pl->elems; i++) {
+		destroy_command(pl->arr[i]);
+	}
+	grow_drop(pl);
 }
 
 void destroy_command(struct command *cmd)
 {
+	if (cmd == NULL) return;
 	// As of now, the .in and .out fields are not ever assigned
 	// We only need to deallocate the array
 	grow_drop(cmd->args);

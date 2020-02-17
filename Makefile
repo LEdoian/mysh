@@ -5,6 +5,7 @@
 
 HEADERS:=grow.h utils.h parse.h parse.tab.h constants.h run.h libtecla/libtecla.h
 OBJS:=grow.o main.o parse.tab.o lex.yy.o utils.o run.o constants.o libtecla/libtecla.a
+TAGTHESE:=grow.h grow.c utils.h utils.c parse.y parse.l constants.h constants.c main.c run.h run.c
 LINKFLAGS:= -lcurses
 CCFLAGS:= -I./libtecla
 
@@ -31,3 +32,6 @@ libtecla/libtecla.a:
 		tar xavf libtecla.tar.gz ;\
 		cd libtecla ;\
 		./configure && make TARGET_LIBS=static ;}
+
+tags: $(TAGTHESE)
+	ctags $(TAGTHESE)

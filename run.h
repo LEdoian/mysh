@@ -6,7 +6,7 @@
 
 #include "parse.h"
 
-void run_pipeline(struct command *pl);
+void run_pipeline(struct grow *pl);
 void run_command(struct command *cmd);
 
 #endif

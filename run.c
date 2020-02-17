@@ -62,10 +62,10 @@ static void change_directory(struct command *cmd)
 		warn("set PWD");
 }
 
-void run_pipeline(struct command *pl)
+void run_pipeline(struct grow *pl)
 {
 	//TODO: implement pipelines
-	run_command(pl);
+	warnx("Pipelines are not implemented yet");
 }
 
 void run_command(struct command *cmd)

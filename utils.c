@@ -4,6 +4,7 @@
 #include "utils.h"
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <err.h>
 
@@ -19,7 +20,7 @@ void *safe_alloc(size_t nbytes)
 void destroy_pipeline(struct grow *pl)
 {
 	if (pl == NULL) return;
-	for(int i = 0; i < pl->elems; i++) {
+	for(uint64_t i = 0; i < pl->elems; i++) {
 		destroy_command(pl->arr[i]);
 	}
 	grow_drop(pl);

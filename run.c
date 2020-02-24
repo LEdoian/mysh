@@ -9,6 +9,8 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "parse.h"
 #include "constants.h"
@@ -189,7 +191,28 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 			if (close(outfd) == -1) err(RETVAL_ERROR, "close out");
 		}
 
-		//TODO: implement redirection here.
+		if (cmd->in != NULL) {
+			struct redirect *redir = cmd->in;
+			assert(redir->redirtype == IN);
+			int fd = open(redir->file, O_RDONLY);
+			if (fd == -1) err(RETVAL_ERROR, "open");
+			if (dup2(fd, STDIN_FILENO) == -1) err(RETVAL_ERROR, "dup2");
+			if (close(fd) == -1) err(RETVAL_ERROR, "close");
+		}
+		if (cmd->out != NULL) {
+			struct redirect *redir = cmd->out;
+			assert(redir->redirtype != IN);
+			int flags = O_WRONLY|O_CREAT;
+			if (redir->redirtype == APPEND) {
+				flags |= O_APPEND;
+			} else {
+				flags |= O_TRUNC;
+			}
+			int fd = open(redir->file, flags, 0666); // umask solves the rest
+			if (fd == -1) err(RETVAL_ERROR, "open");
+			if (dup2(fd, STDOUT_FILENO) == -1) err(RETVAL_ERROR, "dup2");
+			if (close(fd) == -1) err(RETVAL_ERROR, "close");
+		}
 
 		// Execute
 		execvp((char *)cmd->args->arr[0], (char **)cmd->args->arr);

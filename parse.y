@@ -101,7 +101,9 @@ static struct command *push_arg(char *word, struct command *cmd) {
 static struct redirect *newredirect(enum redirtype type, char *filename) {
 	struct redirect *result = safe_alloc(sizeof(struct redirect));
 	result->redirtype = type;
-	result->file = filename;
+	char *newfn = safe_alloc(strlen(filename)+1);
+	strcpy(newfn, filename);
+	result->file = newfn;
 	return result;
 }
 

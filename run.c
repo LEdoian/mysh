@@ -8,6 +8,7 @@
 #include <err.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <assert.h>
 
 #include "parse.h"
 #include "constants.h"
@@ -15,7 +16,9 @@
 #include "run.h"
 #include "utils.h"
 
-static void change_directory(struct command *cmd)
+//FIXME: Implement better error handling
+
+static void change_directory(struct command *cmd, int infd, int outfd)
 {
 	char wd[2048];		// Fix hard-coded constant
 	if (getcwd(wd, 2048) == NULL) {
@@ -26,9 +29,10 @@ static void change_directory(struct command *cmd)
 	case 1:
 		target = getenv("HOME");
 		if (target == NULL) {
+			// Note: this goes to stderr, which (acc. to the assignment) is never redirected, so this needn't be changed.
 			warnx("HOME not set");
 			last_retval = 1;
-			return;
+			goto end;
 		}
 		break;
 	case 2:
@@ -37,22 +41,22 @@ static void change_directory(struct command *cmd)
 			if (target == NULL) {
 				warnx("OLDPWD not set");
 				last_retval = 1;
-				return;
+				goto end;
 			}
-			printf("%s\n", target);
+			dprintf(outfd, "%s\n", target);
 		} else
 			target = cmd->args->arr[1];
 		break;
 	default:
 		warnx("Bad usage of cd (too many)");
 		last_retval = 2;
-		return;
+		goto end;
 	}
 
 	if (chdir(target) == -1) {
 		warn("chdir");
 		last_retval = 1;
-		return;
+		goto end;
 	}
 	// The directory is changed, so we report success (even though environment may be a bit broken)
 	last_retval = 0;
@@ -60,23 +64,101 @@ static void change_directory(struct command *cmd)
 		warn("set OLDPWD");
 	if (setenv("PWD", target, 1) == -1)
 		warn("set PWD");
+
+end:
+	// Close all fd's
+	if (infd != STDIN_FILENO) {
+		if (close(infd) == -1) err(RETVAL_ERROR, "close in");
+	}
+	if (outfd != STDOUT_FILENO) {
+		if (close(outfd) == -1) err(RETVAL_ERROR, "close out");
+	}
 }
 
+// The plan: create all the pipes here and then run the processes with run_command, which will close the fd's that should be closed
 void run_pipeline(struct grow *pl)
 {
-	//TODO: implement pipelines
-	warnx("Pipelines are not implemented yet");
+	// Create a list of filedescriptors 2n long (where n is number of processes in the pipeline):
+	struct grow *fds = grow_init(true);
+	int *stdin_p = (int *) safe_alloc(sizeof(int));
+	int *stdout_p = (int *) safe_alloc(sizeof(int));
+	*stdin_p = STDIN_FILENO;
+	*stdout_p = STDOUT_FILENO;
+	grow_push(stdin_p, fds);
+	// Intermediate FD's:
+	for (uint64_t i = 1; i < pl->elems; i++) {
+		int *in_p = (int *) safe_alloc(sizeof(int));
+		int *out_p = (int *) safe_alloc(sizeof(int));
+		int pipefds[2];
+		if(pipe(pipefds) == -1) err(RETVAL_ERROR, "pipe; **TODO BAD HANDLING**");
+		*in_p = pipefds[0];
+		*out_p = pipefds[1];
+		grow_push(out_p, fds);
+		grow_push(in_p, fds);
+	}
+	grow_push(stdout_p, fds);
+	
+	assert(2*pl->elems == fds->elems);
+	
+	// Let run_command spawn the processes with the correct input and output fds
+	struct grow *pids = grow_init(true);
+	for (uint64_t i = 0; i < pl->elems; i++) {
+		pid_t pid = run_command(pl->arr[i], *(int *)fds->arr[2*i], *(int *)fds->arr[2*i+1]);
+		if (pid == -1) warnx("Command execution failed");
+		if (pid == 0) continue;
+		pid_t *pid_p = safe_alloc(sizeof(pid_t));
+		*pid_p = pid;
+		grow_push(pid_p, pids);
+	}
+
+	// Wait for all the children in order
+	// Reason: the last status gets remembered for postprocessing
+	if (pids->elems == 0) goto cleanup;
+	pid_t result;
+	int status;
+	for (uint64_t i = 0; i < pids->elems; i++) {
+		do {
+			result = waitpid(*(pid_t *)pids->arr[i], &status, 0);
+		} while ((result == -1 && errno == EINTR) ||
+			 (result != -1 && (WIFSTOPPED(status) || WIFCONTINUED(status))
+			 )
+			);
+
+		if (result == -1) {
+			warn("wait");
+			last_retval = RETVAL_ERROR;
+			continue;
+		}
+	}
+
+	// Process the final result
+	if (WIFEXITED(status)) {
+		last_retval = WEXITSTATUS(status);
+		goto cleanup;
+	}
+	if (WIFSIGNALED(status)) {
+		fprintf(stderr, "Killed by signal %d.\n", WTERMSIG(status));
+		last_retval = 128 + WTERMSIG(status);
+		goto cleanup;
+	}
+	warnx("Something strange is happening");
+	last_retval = RETVAL_ERROR;
+
+cleanup:
+	grow_drop(fds);
+	grow_drop(pids);
 }
 
-void run_command(struct command *cmd)
+pid_t run_command(struct command *cmd, int infd, int outfd)
 {
+	// Hardcoded two builtins and error checking (not nice, sufficient)
 	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1)
 		errx(RETVAL_ERROR, "bad cmd");
 	if (strcmp(cmd->args->arr[0], "exit") == 0)
 		exit(last_retval);
 	if (strcmp(cmd->args->arr[0], "cd") == 0) {
-		change_directory(cmd);
-		return;
+		change_directory(cmd, infd, outfd);
+		return 0; //there is no PID
 	}
 	// We want to use cmd->args as argument to execvp
 	grow_push(NULL, cmd->args);
@@ -84,7 +166,7 @@ void run_command(struct command *cmd)
 	if (pid == -1) {
 		warn("fork");
 		last_retval = RETVAL_ERROR;
-		return;
+		return -1; //Error with getting PID
 	}
 	if (pid == 0) {
 		// Child
@@ -97,6 +179,19 @@ void run_command(struct command *cmd)
 			err(RETVAL_ERROR, "sigaction");
 		}
 
+		// dup2 file descriptors to stdio and close them
+		if (dup2(infd, STDIN_FILENO) == -1) err(RETVAL_ERROR, "dup2 in");
+		if (dup2(outfd, STDOUT_FILENO) == -1) err(RETVAL_ERROR, "dup2 out");
+		if (infd != STDIN_FILENO) {
+			if (close(infd) == -1) err(RETVAL_ERROR, "close in");
+		}
+		if (outfd != STDOUT_FILENO) {
+			if (close(outfd) == -1) err(RETVAL_ERROR, "close out");
+		}
+
+		//TODO: implement redirection here.
+
+		// Execute
 		execvp((char *)cmd->args->arr[0], (char **)cmd->args->arr);
 		fprintf(stderr, "mysh: %s: %s\n", (char *)cmd->args->arr[0],
 			strerror(errno));
@@ -109,32 +204,11 @@ void run_command(struct command *cmd)
 			exit(RETVAL_ERROR);
 			break;
 		}
-
 	}
 	// Parent
-	pid_t result;
-	int status;
-	do {
-		result = waitpid(pid, &status, 0);
-	} while ((result == -1 && errno == EINTR) ||
-		 (result != -1 && (WIFSTOPPED(status) || WIFCONTINUED(status))
-		 )
-	    );
-
-	if (result == -1) {
-		warn("wait");
-		last_retval = RETVAL_ERROR;
-		return;
-	}
-	if (WIFEXITED(status)) {
-		last_retval = WEXITSTATUS(status);
-		return;
-	}
-	if (WIFSIGNALED(status)) {
-		fprintf(stderr, "Killed by signal %d.\n", WTERMSIG(status));
-		last_retval = 128 + WTERMSIG(status);
-		return;
-	}
-	warnx("Something strange is happening");
-	last_retval = RETVAL_ERROR;
+	
+	// Just close the file descriptors dedicated to inputs and outputs of child and return child's PID
+	if (infd != STDIN_FILENO) close(infd);
+	if (outfd != STDOUT_FILENO) close(outfd);
+	return pid;
 }

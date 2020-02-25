@@ -1,8 +1,6 @@
 # This is cringeworthy, I hope to make it much nicer
 # Still, it's just a bunch of files, so maybe not worth the trouble
 
-# FIXME: Something is bad and paralell make does not work
-
 HEADERS:=grow.h utils.h parse.h parse.tab.h constants.h run.h libtecla/libtecla.h
 OBJS:=grow.o main.o parse.tab.o lex.yy.o utils.o run.o constants.o libtecla/libtecla.a
 TAGTHESE:=grow.h grow.c utils.h utils.c parse.y parse.l constants.h constants.c main.c run.h run.c

@@ -18,13 +18,13 @@
 #include "run.h"
 #include "utils.h"
 
-//FIXME: Implement better error handling
-
 static void change_directory(struct command *cmd, int infd, int outfd)
 {
 	char wd[2048];		// FIXME: hard-coded constant
 	if (getcwd(wd, 2048) == NULL) {
-		err(RETVAL_ERROR, "getcwd");
+		warn("getcwd");
+		last_retval = RETVAL_ERROR;
+		goto end;
 	}
 	char *target;
 	switch (cmd->args->elems) {
@@ -70,12 +70,16 @@ static void change_directory(struct command *cmd, int infd, int outfd)
  end:
 	// Close all fd's
 	if (infd != STDIN_FILENO) {
-		if (close(infd) == -1)
-			err(RETVAL_ERROR, "close in");
+		if (close(infd) == -1) {
+			warn("close in");
+			last_retval = RETVAL_ERROR;
+		}
 	}
 	if (outfd != STDOUT_FILENO) {
-		if (close(outfd) == -1)
-			err(RETVAL_ERROR, "close out");
+		if (close(outfd) == -1) {
+			warn("close out");
+			last_retval = RETVAL_ERROR;
+		}
 	}
 }
 
@@ -94,8 +98,17 @@ void run_pipeline(struct grow *pl)
 		int *in_p = (int *)safe_alloc(sizeof(int));
 		int *out_p = (int *)safe_alloc(sizeof(int));
 		int pipefds[2];
-		if (pipe(pipefds) == -1)
-			err(RETVAL_ERROR, "pipe; **TODO BAD HANDLING**");
+		if (pipe(pipefds) == -1) {
+			warn("pipe failed");
+			//Cleanup:
+			for (uint64_t j = 0; j < fds->elems; j++) {
+				int fd = *(int *)fds->arr[j];
+				if (fd > 2) close(fd);
+			}
+			grow_drop(fds);
+			last_retval = RETVAL_ERROR;
+			return;
+		}
 		*in_p = pipefds[0];
 		*out_p = pipefds[1];
 		grow_push(out_p, fds);
@@ -111,8 +124,14 @@ void run_pipeline(struct grow *pl)
 		pid_t pid =
 		    run_command(pl->arr[i], *(int *)fds->arr[2 * i],
 				*(int *)fds->arr[2 * i + 1]);
-		if (pid == -1)
+		if (pid == -1) {
 			warnx("Command execution failed");
+			// Complete bail out: kill the pipeline, close all the fd's
+			for (uint64_t j = 0 ; j < pids->elems; j++) kill(*(pid_t *)pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
+			for (uint64_t j = 0 ; j < fds->elems; j++) close(*(int*)fds->arr[j]);
+			last_retval = RETVAL_ERROR;
+			goto cleanup;
+		}
 		if (pid == 0)
 			continue;
 		pid_t *pid_p = safe_alloc(sizeof(pid_t));
@@ -163,8 +182,13 @@ void run_pipeline(struct grow *pl)
 pid_t run_command(struct command *cmd, int infd, int outfd)
 {
 	// Hardcoded two builtins and error checking (not nice, sufficient)
-	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1)
-		errx(RETVAL_ERROR, "bad cmd");
+	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1) {
+		warnx("bad cmd");
+		if (infd != STDIN_FILENO) close(infd);
+		if (outfd != STDOUT_FILENO) close(outfd);
+		last_retval = RETVAL_ERROR;
+		return -1;
+	}
 	if (strcmp((char *)cmd->args->arr[0], "exit") == 0)
 		exit(last_retval);
 	if (strcmp((char *)cmd->args->arr[0], "cd") == 0) {
@@ -176,6 +200,8 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 	pid_t pid = fork();
 	if (pid == -1) {
 		warn("fork");
+		if (infd != STDIN_FILENO) close(infd);
+		if (outfd != STDOUT_FILENO) close(outfd);
 		last_retval = RETVAL_ERROR;
 		return -1;	//Error with getting PID
 	}

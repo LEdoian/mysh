@@ -16,7 +16,7 @@ extern bool end_reached;
 extern int last_retval;
 
 // Possible types of redirect
-enum redirtype {IN, OUT, APPEND};
+enum redirtype { IN, OUT, APPEND };
 
 // A struct to describe a redirect
 struct redirect {

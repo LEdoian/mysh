@@ -67,13 +67,15 @@ static void change_directory(struct command *cmd, int infd, int outfd)
 	if (setenv("PWD", target, 1) == -1)
 		warn("set PWD");
 
-end:
+ end:
 	// Close all fd's
 	if (infd != STDIN_FILENO) {
-		if (close(infd) == -1) err(RETVAL_ERROR, "close in");
+		if (close(infd) == -1)
+			err(RETVAL_ERROR, "close in");
 	}
 	if (outfd != STDOUT_FILENO) {
-		if (close(outfd) == -1) err(RETVAL_ERROR, "close out");
+		if (close(outfd) == -1)
+			err(RETVAL_ERROR, "close out");
 	}
 }
 
@@ -82,32 +84,37 @@ void run_pipeline(struct grow *pl)
 {
 	// Create a list of filedescriptors 2n long (where n is number of processes in the pipeline):
 	struct grow *fds = grow_init(true);
-	int *stdin_p = (int *) safe_alloc(sizeof(int));
-	int *stdout_p = (int *) safe_alloc(sizeof(int));
+	int *stdin_p = (int *)safe_alloc(sizeof(int));
+	int *stdout_p = (int *)safe_alloc(sizeof(int));
 	*stdin_p = STDIN_FILENO;
 	*stdout_p = STDOUT_FILENO;
 	grow_push(stdin_p, fds);
 	// Intermediate FD's:
 	for (uint64_t i = 1; i < pl->elems; i++) {
-		int *in_p = (int *) safe_alloc(sizeof(int));
-		int *out_p = (int *) safe_alloc(sizeof(int));
+		int *in_p = (int *)safe_alloc(sizeof(int));
+		int *out_p = (int *)safe_alloc(sizeof(int));
 		int pipefds[2];
-		if(pipe(pipefds) == -1) err(RETVAL_ERROR, "pipe; **TODO BAD HANDLING**");
+		if (pipe(pipefds) == -1)
+			err(RETVAL_ERROR, "pipe; **TODO BAD HANDLING**");
 		*in_p = pipefds[0];
 		*out_p = pipefds[1];
 		grow_push(out_p, fds);
 		grow_push(in_p, fds);
 	}
 	grow_push(stdout_p, fds);
-	
-	assert(2*pl->elems == fds->elems);
-	
+
+	assert(2 * pl->elems == fds->elems);
+
 	// Let run_command spawn the processes with the correct input and output fds
 	struct grow *pids = grow_init(true);
 	for (uint64_t i = 0; i < pl->elems; i++) {
-		pid_t pid = run_command(pl->arr[i], *(int *)fds->arr[2*i], *(int *)fds->arr[2*i+1]);
-		if (pid == -1) warnx("Command execution failed");
-		if (pid == 0) continue;
+		pid_t pid =
+		    run_command(pl->arr[i], *(int *)fds->arr[2 * i],
+				*(int *)fds->arr[2 * i + 1]);
+		if (pid == -1)
+			warnx("Command execution failed");
+		if (pid == 0)
+			continue;
 		pid_t *pid_p = safe_alloc(sizeof(pid_t));
 		*pid_p = pid;
 		grow_push(pid_p, pids);
@@ -115,16 +122,18 @@ void run_pipeline(struct grow *pl)
 
 	// Wait for all the children in order
 	// Reason: the last status gets remembered for postprocessing
-	if (pids->elems == 0) goto cleanup;
+	if (pids->elems == 0)
+		goto cleanup;
 	pid_t result;
 	int status;
 	for (uint64_t i = 0; i < pids->elems; i++) {
 		do {
-			result = waitpid(*(pid_t *)pids->arr[i], &status, 0);
+			result = waitpid(*(pid_t *) pids->arr[i], &status, 0);
 		} while ((result == -1 && errno == EINTR) ||
-			 (result != -1 && (WIFSTOPPED(status) || WIFCONTINUED(status))
+			 (result != -1
+			  && (WIFSTOPPED(status) || WIFCONTINUED(status))
 			 )
-			);
+		    );
 
 		if (result == -1) {
 			warn("wait");
@@ -146,7 +155,7 @@ void run_pipeline(struct grow *pl)
 	warnx("Something strange is happening");
 	last_retval = RETVAL_ERROR;
 
-cleanup:
+ cleanup:
 	grow_drop(fds);
 	grow_drop(pids);
 }
@@ -160,7 +169,7 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 		exit(last_retval);
 	if (strcmp((char *)cmd->args->arr[0], "cd") == 0) {
 		change_directory(cmd, infd, outfd);
-		return 0; //there is no PID
+		return 0;	//there is no PID
 	}
 	// We want to use cmd->args as argument to execvp
 	grow_push(NULL, cmd->args);
@@ -168,7 +177,7 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 	if (pid == -1) {
 		warn("fork");
 		last_retval = RETVAL_ERROR;
-		return -1; //Error with getting PID
+		return -1;	//Error with getting PID
 	}
 	if (pid == 0) {
 		// Child
@@ -180,40 +189,48 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 		if (sigaction(SIGINT, &sa, NULL) == -1) {
 			err(RETVAL_ERROR, "sigaction");
 		}
-
 		// dup2 file descriptors to stdio and close them
-		if (dup2(infd, STDIN_FILENO) == -1) err(RETVAL_ERROR, "dup2 in");
-		if (dup2(outfd, STDOUT_FILENO) == -1) err(RETVAL_ERROR, "dup2 out");
+		if (dup2(infd, STDIN_FILENO) == -1)
+			err(RETVAL_ERROR, "dup2 in");
+		if (dup2(outfd, STDOUT_FILENO) == -1)
+			err(RETVAL_ERROR, "dup2 out");
 		if (infd != STDIN_FILENO) {
-			if (close(infd) == -1) err(RETVAL_ERROR, "close in");
+			if (close(infd) == -1)
+				err(RETVAL_ERROR, "close in");
 		}
 		if (outfd != STDOUT_FILENO) {
-			if (close(outfd) == -1) err(RETVAL_ERROR, "close out");
+			if (close(outfd) == -1)
+				err(RETVAL_ERROR, "close out");
 		}
 
 		if (cmd->in != NULL) {
 			struct redirect *redir = cmd->in;
 			assert(redir->redirtype == IN);
 			int fd = open(redir->file, O_RDONLY);
-			if (fd == -1) err(RETVAL_ERROR, "open");
-			if (dup2(fd, STDIN_FILENO) == -1) err(RETVAL_ERROR, "dup2");
-			if (close(fd) == -1) err(RETVAL_ERROR, "close");
+			if (fd == -1)
+				err(RETVAL_ERROR, "open");
+			if (dup2(fd, STDIN_FILENO) == -1)
+				err(RETVAL_ERROR, "dup2");
+			if (close(fd) == -1)
+				err(RETVAL_ERROR, "close");
 		}
 		if (cmd->out != NULL) {
 			struct redirect *redir = cmd->out;
 			assert(redir->redirtype != IN);
-			int flags = O_WRONLY|O_CREAT;
+			int flags = O_WRONLY | O_CREAT;
 			if (redir->redirtype == APPEND) {
 				flags |= O_APPEND;
 			} else {
 				flags |= O_TRUNC;
 			}
-			int fd = open(redir->file, flags, 0666); // umask solves the rest
-			if (fd == -1) err(RETVAL_ERROR, "open");
-			if (dup2(fd, STDOUT_FILENO) == -1) err(RETVAL_ERROR, "dup2");
-			if (close(fd) == -1) err(RETVAL_ERROR, "close");
+			int fd = open(redir->file, flags, 0666);	// umask solves the rest
+			if (fd == -1)
+				err(RETVAL_ERROR, "open");
+			if (dup2(fd, STDOUT_FILENO) == -1)
+				err(RETVAL_ERROR, "dup2");
+			if (close(fd) == -1)
+				err(RETVAL_ERROR, "close");
 		}
-
 		// Execute
 		execvp((char *)cmd->args->arr[0], (char **)cmd->args->arr);
 		fprintf(stderr, "mysh: %s: %s\n", (char *)cmd->args->arr[0],
@@ -229,9 +246,11 @@ pid_t run_command(struct command *cmd, int infd, int outfd)
 		}
 	}
 	// Parent
-	
+
 	// Just close the file descriptors dedicated to inputs and outputs of child and return child's PID
-	if (infd != STDIN_FILENO) close(infd);
-	if (outfd != STDOUT_FILENO) close(outfd);
+	if (infd != STDIN_FILENO)
+		close(infd);
+	if (outfd != STDOUT_FILENO)
+		close(outfd);
 	return pid;
 }

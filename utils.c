@@ -19,8 +19,9 @@ void *safe_alloc(size_t nbytes)
 
 void destroy_pipeline(struct grow *pl)
 {
-	if (pl == NULL) return;
-	for(uint64_t i = 0; i < pl->elems; i++) {
+	if (pl == NULL)
+		return;
+	for (uint64_t i = 0; i < pl->elems; i++) {
 		destroy_command(pl->arr[i]);
 	}
 	grow_drop(pl);
@@ -28,7 +29,8 @@ void destroy_pipeline(struct grow *pl)
 
 void destroy_command(struct command *cmd)
 {
-	if (cmd == NULL) return;
+	if (cmd == NULL)
+		return;
 	// As of now, the .in and .out fields are not ever assigned
 	// We only need to deallocate the array
 	grow_drop(cmd->args);
@@ -37,7 +39,8 @@ void destroy_command(struct command *cmd)
 
 void destroy_redirect(struct redirect *redir)
 {
-	if (redir == NULL) return;
+	if (redir == NULL)
+		return;
 	free(redir->file);
 	free(redir);
 }

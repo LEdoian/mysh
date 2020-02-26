@@ -6,3 +6,4 @@
 lex.yy.c
 /mysh
 /tags
+*.md.backup

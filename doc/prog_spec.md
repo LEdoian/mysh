@@ -83,3 +83,5 @@ Final notes
 I hope not to have upset Mr. Stallman that I say just Bison and not GNU Bison.
 
 Also, I consider the header files as a part of this programmer's documentation, because they are readable and it would be useless to duplicate signatures here.
+
+When implementing the lexer and parser, I referenced the "Flex & Bison" book by John Levine.

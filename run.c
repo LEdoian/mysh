@@ -88,63 +88,51 @@ static void change_directory(struct command *cmd, int infd, int outfd)
 // The plan: create all the pipes here and then run the processes with run_command, which will close the fd's that should be closed
 void run_pipeline(struct grow *pl)
 {
-	// Create a list of filedescriptors 2n long (where n is number of processes in the pipeline):
-	struct grow *fds = grow_init(true);
-	int *stdin_p = (int *)safe_alloc(sizeof(int));
-	int *stdout_p = (int *)safe_alloc(sizeof(int));
-	*stdin_p = STDIN_FILENO;
-	*stdout_p = STDOUT_FILENO;
-	grow_push(stdin_p, fds);
-	// Intermediate FD's:
-	for (uint64_t i = 1; i < pl->elems; i++) {
-		int *in_p = (int *)safe_alloc(sizeof(int));
-		int *out_p = (int *)safe_alloc(sizeof(int));
-		int pipefds[2];
-		if (pipe(pipefds) == -1) {
-			warn("pipe failed");
-			//Cleanup:
-			for (uint64_t j = 0; j < fds->elems; j++) {
-				int fd = *(int *)fds->arr[j];
-				if (fd > 2) close(fd);
-			}
-			grow_drop(fds);
-			last_retval = RETVAL_ERROR;
-			return;
-		}
-		// In and out directions are decided from the program's viewpoint, i.e.
-		// out is the program's output, disregarding the fact that it's the
-		// input to the pipe. This is consistent with the notion of (shell's)
-		// stdin and stdout.
-		*in_p = pipefds[0];
-		*out_p = pipefds[1];
-		grow_push(out_p, fds);
-		grow_push(in_p, fds);
-	}
-	grow_push(stdout_p, fds);
-
-	assert(2 * pl->elems == fds->elems);
-
-	// Let run_command spawn the processes with the correct input and output fds
+	// Array of PIDs of childs, in order
 	struct grow *pids = grow_init(true);
+	// In and out directions are decided from the program's viewpoint, i.e.
+	// out is the program's output, disregarding the fact that it's the
+	// input to the pipe. This is consistent with the notion of (shell's)
+	// stdin and stdout.
+	int current_in = STDIN_FILENO;
+	int current_out; // Will be set according to circumstances at the begining of the loop
+	// Spawn the all the processes with run_command, suplying right input and output fd's
 	for (uint64_t i = 0; i < pl->elems; i++) {
-		pid_t pid =
-		    run_command(pl->arr[i], *(int *)fds->arr[2 * i],
-				*(int *)fds->arr[2 * i + 1]);
+		int new_in; // relevant only for pipelines
+		// Set current_out
+		if (i == pl->elems - 1) current_out = STDOUT_FILENO;
+		else {
+			// Create a pipe for the output
+			int pipefds[2];
+			if (pipe(pipefds) == -1) {
+				warn("pipe failed");
+				// Complete bail out: kill the pipeline, close all remaining fd's
+				for (uint64_t j = 0 ; j < pids->elems; j++) kill(*(pid_t *)pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
+				if (current_in != STDIN_FILENO) close(current_in);
+				if (current_out != STDOUT_FILENO) close(current_out);
+				last_retval = RETVAL_ERROR;
+				goto cleanup;
+			}
+			current_out = pipefds[1];
+			new_in = pipefds[0];
+		}
+		pid_t pid = run_command(pl->arr[i], current_in, current_out);	// run_command makes sure the fd's will be closed, unless stdio.
 		if (pid == -1) {
+			// NOTE: failing execution still closes the fd's, probably killing the running pipeline by SIGPIPE.
 			warnx("Command execution failed");
-			// Complete bail out: kill the pipeline, close all the fd's
-			for (uint64_t j = 0 ; j < pids->elems; j++) kill(*(pid_t *)pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
-			for (uint64_t j = 0 ; j < fds->elems; j++) close(*(int*)fds->arr[j]);
-			last_retval = RETVAL_ERROR;
 			goto cleanup;
 		}
+		// Save the PID for waiting
 		if (pid == 0)
-			continue;
+			continue; // No PID
 		pid_t *pid_p = safe_alloc(sizeof(pid_t));
 		*pid_p = pid;
 		grow_push(pid_p, pids);
+		
+		// Set current_in for next iteration
+		current_in = new_in;
 	}
-
+	
 	// Wait for all the children in order
 	// Reason: the last status gets remembered for postprocessing
 	if (pids->elems == 0)
@@ -181,7 +169,6 @@ void run_pipeline(struct grow *pl)
 	last_retval = RETVAL_ERROR;
 
  cleanup:
-	grow_drop(fds);
 	grow_drop(pids);
 }
 

@@ -26,7 +26,7 @@ lex.yy.c: parse.l parse.tab.h Makefile
 libtecla/libtecla.h: libtecla/libtecla.a
 
 libtecla/libtecla.a:
-	{	curl 'http://www.astro.caltech.edu/~mcs/tecla/libtecla.tar.gz' > libtecla.tar.gz ;\
+	{	curl 'https://www.astro.caltech.edu/~mcs/tecla/libtecla.tar.gz' > libtecla.tar.gz ;\
 		tar xavf libtecla.tar.gz ;\
 		cd libtecla ;\
 		./configure && make TARGET_LIBS=static ;}

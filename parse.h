@@ -29,7 +29,6 @@ struct command {
 	struct grow *args;
 	struct redirect *in;
 	struct redirect *out;
-	bool out_append;
 };
 
 int parse_and_run_str(char *str);

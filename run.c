@@ -18,6 +18,8 @@
 #include "run.h"
 #include "utils.h"
 
+static pid_t run_command(struct command *cmd, int infd, int outfd);
+
 static void change_directory(struct command *cmd, int infd, int outfd)
 {
 	char wd[2048];		// FIXME: hard-coded constant
@@ -179,7 +181,7 @@ void run_pipeline(struct grow *pl)
 	grow_drop(pids);
 }
 
-pid_t run_command(struct command *cmd, int infd, int outfd)
+static pid_t run_command(struct command *cmd, int infd, int outfd)
 {
 	// Hardcoded two builtins and error checking (not nice, sufficient)
 	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1) {

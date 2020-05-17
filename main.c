@@ -55,11 +55,12 @@ static int repl(void)
 			GlReturnStatus status = gl_return_status(gl);
 			if (status == GLR_SIGNAL)
 				continue;	// This is only SIGINT, other signals kill us by default and we do not catch them
-			if (status == GLR_EOF)
+			if (status == GLR_EOF || status == GLR_BLOCKED)
 				break;
 			if (status == GLR_ERROR)
-				errx(3, "gl_read_line: %s",
+				errx(RETVAL_ERROR, "gl_read_line: %s",
 				     gl_error_message(gl, NULL, 0));
+			errx(RETVAL_ERROR, "Unknown error in gl_get_line");
 		}
 		if (strchr(line, '\0') == NULL) {
 			// The line was too long

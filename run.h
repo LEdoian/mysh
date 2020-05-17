@@ -4,9 +4,8 @@
 #ifndef RUN_H
 #define RUN_H
 
-#include "parse.h"
+#include "grow.h"
 
 void run_pipeline(struct grow *pl);
-pid_t run_command(struct command *cmd, int infd, int outfd);
 
 #endif

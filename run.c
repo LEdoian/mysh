@@ -111,6 +111,10 @@ void run_pipeline(struct grow *pl)
 			last_retval = RETVAL_ERROR;
 			return;
 		}
+		// In and out directions are decided from the program's viewpoint, i.e.
+		// out is the program's output, disregarding the fact that it's the
+		// input to the pipe. This is consistent with the notion of (shell's)
+		// stdin and stdout.
 		*in_p = pipefds[0];
 		*out_p = pipefds[1];
 		grow_push(out_p, fds);

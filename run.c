@@ -95,21 +95,25 @@ void run_pipeline(struct grow *pl)
 	// input to the pipe. This is consistent with the notion of (shell's)
 	// stdin and stdout.
 	int current_in = STDIN_FILENO;
-	int current_out; // Will be set according to circumstances at the begining of the loop
+	int current_out;	// Will be set according to circumstances at the begining of the loop
 	// Spawn the all the processes with run_command, suplying right input and output fd's
 	for (uint64_t i = 0; i < pl->elems; i++) {
-		int new_in; // relevant only for pipelines
+		int new_in;	// relevant only for pipelines
 		// Set current_out
-		if (i == pl->elems - 1) current_out = STDOUT_FILENO;
+		if (i == pl->elems - 1)
+			current_out = STDOUT_FILENO;
 		else {
 			// Create a pipe for the output
 			int pipefds[2];
 			if (pipe(pipefds) == -1) {
 				warn("pipe failed");
 				// Complete bail out: kill the pipeline, close all remaining fd's
-				for (uint64_t j = 0 ; j < pids->elems; j++) kill(*(pid_t *)pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
-				if (current_in != STDIN_FILENO) close(current_in);
-				if (current_out != STDOUT_FILENO) close(current_out);
+				for (uint64_t j = 0; j < pids->elems; j++)
+					kill(*(pid_t *) pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
+				if (current_in != STDIN_FILENO)
+					close(current_in);
+				if (current_out != STDOUT_FILENO)
+					close(current_out);
 				last_retval = RETVAL_ERROR;
 				goto cleanup;
 			}
@@ -124,15 +128,15 @@ void run_pipeline(struct grow *pl)
 		}
 		// Save the PID for waiting
 		if (pid == 0)
-			continue; // No PID
+			continue;	// No PID
 		pid_t *pid_p = safe_alloc(sizeof(pid_t));
 		*pid_p = pid;
 		grow_push(pid_p, pids);
-		
+
 		// Set current_in for next iteration
 		current_in = new_in;
 	}
-	
+
 	// Wait for all the children in order
 	// Reason: the last status gets remembered for postprocessing
 	if (pids->elems == 0)
@@ -177,8 +181,10 @@ static pid_t run_command(struct command *cmd, int infd, int outfd)
 	// Hardcoded two builtins and error checking (not nice, sufficient)
 	if (cmd == NULL || cmd->args == NULL || cmd->args->elems < 1) {
 		warnx("bad cmd");
-		if (infd != STDIN_FILENO) close(infd);
-		if (outfd != STDOUT_FILENO) close(outfd);
+		if (infd != STDIN_FILENO)
+			close(infd);
+		if (outfd != STDOUT_FILENO)
+			close(outfd);
 		last_retval = RETVAL_ERROR;
 		return -1;
 	}
@@ -193,8 +199,10 @@ static pid_t run_command(struct command *cmd, int infd, int outfd)
 	pid_t pid = fork();
 	if (pid == -1) {
 		warn("fork");
-		if (infd != STDIN_FILENO) close(infd);
-		if (outfd != STDOUT_FILENO) close(outfd);
+		if (infd != STDIN_FILENO)
+			close(infd);
+		if (outfd != STDOUT_FILENO)
+			close(outfd);
 		last_retval = RETVAL_ERROR;
 		return -1;	//Error with getting PID
 	}

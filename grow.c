@@ -10,7 +10,8 @@
 struct grow *grow_init(bool dealloc)
 {
 	struct grow *g = safe_alloc(sizeof(struct grow));
-	// We know that safe_alloc zeroes the memory, so we only need to set the interesting parts.
+	// We know that safe_alloc zeroes the memory, so we only need to set the
+	// interesting parts.
 	g->dealloc = dealloc;
 	return g;
 }

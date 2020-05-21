@@ -33,7 +33,8 @@ static void change_directory(struct command *cmd, int infd, int outfd)
 	case 1:
 		target = getenv("HOME");
 		if (target == NULL) {
-			// Note: this goes to stderr, which (acc. to the assignment) is never redirected, so this needn't be changed.
+			// Note: this goes to stderr, which (acc. to the assignment) is
+			// never redirected, so this needn't be changed.
 			warnx("HOME not set");
 			last_retval = 1;
 			goto end;
@@ -62,7 +63,8 @@ static void change_directory(struct command *cmd, int infd, int outfd)
 		last_retval = 1;
 		goto end;
 	}
-	// The directory is changed, so we report success (even though environment may be a bit broken)
+	// The directory is changed, so we report success (even though environment
+	// may be a bit broken)
 	last_retval = 0;
 	if (setenv("OLDPWD", wd, 1) == -1)
 		warn("set OLDPWD");
@@ -85,7 +87,8 @@ static void change_directory(struct command *cmd, int infd, int outfd)
 	}
 }
 
-// The plan: create all the pipes here and then run the processes with run_command, which will close the fd's that should be closed
+// The plan: create all the pipes here and then run the processes with
+// run_command, which will close the fd's that should be closed
 void run_pipeline(struct grow *pl)
 {
 	// Array of PIDs of childs, in order
@@ -95,8 +98,9 @@ void run_pipeline(struct grow *pl)
 	// input to the pipe. This is consistent with the notion of (shell's)
 	// stdin and stdout.
 	int current_in = STDIN_FILENO;
-	int current_out;	// Will be set according to circumstances at the begining of the loop
-	// Spawn the all the processes with run_command, suplying right input and output fd's
+	int current_out;	// Will be set at the begining of the loop
+	// Spawn the all the processes with run_command, suplying right input and
+	// output fd's
 	for (uint64_t i = 0; i < pl->elems; i++) {
 		int new_in;	// relevant only for pipelines
 		// Set current_out
@@ -107,9 +111,10 @@ void run_pipeline(struct grow *pl)
 			int pipefds[2];
 			if (pipe(pipefds) == -1) {
 				warn("pipe failed");
-				// Complete bail out: kill the pipeline, close all remaining fd's
+				// Complete bail out: kill the pipeline, close all remaining fds
 				for (uint64_t j = 0; j < pids->elems; j++)
-					kill(*(pid_t *) pids->arr[j], SIGPIPE);	//FIXME: Is SIGPIPE the right signal?
+					//FIXME: Is SIGPIPE the right signal?
+					kill(*(pid_t *) pids->arr[j], SIGPIPE);
 				if (current_in != STDIN_FILENO)
 					close(current_in);
 				if (current_out != STDOUT_FILENO)
@@ -120,9 +125,11 @@ void run_pipeline(struct grow *pl)
 			current_out = pipefds[1];
 			new_in = pipefds[0];
 		}
-		pid_t pid = run_command(pl->arr[i], current_in, current_out);	// run_command makes sure the fd's will be closed, unless stdio.
+		// run_command makes sure the fd's will be closed, unless stdio.
+		pid_t pid = run_command(pl->arr[i], current_in, current_out);
 		if (pid == -1) {
-			// NOTE: failing execution still closes the fd's, probably killing the running pipeline by SIGPIPE.
+			// NOTE: failing execution still closes the fd's, probably killing
+			// the running pipeline by SIGPIPE.
 			warnx("Command execution failed");
 			goto cleanup;
 		}
@@ -274,7 +281,8 @@ static pid_t run_command(struct command *cmd, int infd, int outfd)
 	}
 	// Parent
 
-	// Just close the file descriptors dedicated to inputs and outputs of child and return child's PID
+	// Just close the file descriptors dedicated to inputs and outputs of child
+	// and return child's PID
 	if (infd != STDIN_FILENO)
 		close(infd);
 	if (outfd != STDOUT_FILENO)

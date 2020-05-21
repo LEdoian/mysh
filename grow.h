@@ -9,10 +9,11 @@
 #include <stdlib.h>
 
 struct grow {
-	void **arr;		// The array itself
+	void **arr;	// The array itself
 	uint64_t elems;
 	uint64_t alloc;
-	bool dealloc;		// Should the elements be deallocated when destroying the array?
+	// Should the elements be deallocated when destroying the array?
+	bool dealloc;
 };
 
 struct grow *grow_init(bool dealloc);

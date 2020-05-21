@@ -23,7 +23,8 @@ static char *gen_prompt(void)
 		path_max = 1024;	// Hopefully reasonable upper bound
 	char path[path_max];
 	if (getcwd(path, path_max) == NULL) {
-		strcpy(path, "(broken getcwd)");	// We assume that path_max is not unreasonably short
+		// We assume that path_max is not unreasonably short
+		strcpy(path, "(broken getcwd)");
 	}
 	char *prompt = safe_alloc(path_max + 10);
 	sprintf(prompt, "mysh:%s$ ", path);	// Same as in the assignment
@@ -54,7 +55,9 @@ static int repl(void)
 		if (line == NULL) {
 			GlReturnStatus status = gl_return_status(gl);
 			if (status == GLR_SIGNAL)
-				continue;	// This is only SIGINT, other signals kill us by default and we do not catch them
+				// This is only SIGINT, other signals kill us by default and we
+				// do not catch them
+				continue;
 			if (status == GLR_EOF || status == GLR_BLOCKED)
 				break;
 			if (status == GLR_ERROR)

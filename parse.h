@@ -1,6 +1,9 @@
 #ifndef PARSE_H
 #define PARSE_H
 
+#define YY_NO_UNPUT
+#define YY_NO_INPUT
+
 #include <stdbool.h>
 
 #include "grow.h"

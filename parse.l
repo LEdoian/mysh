@@ -11,6 +11,7 @@
 #include "parse.h"
 #include "run.h"
 #include "utils.h"
+#include "workaround_uncaused_bugs.h"
 %}
 
 %option noyywrap nodefault yylineno
